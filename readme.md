@@ -33,10 +33,8 @@ Where $W_{save} = 150.0$ is the tuned cross-lap arbitrage weight. This constant 
 ### Constraints
 1.  **Power Bounds**: $0 \le u_k \le P_{max} \quad \forall k \in [1, N]$
 2.  **Storage Bounds**: $0 \le soc_k \le soc_{max} \quad \forall k \in [1, N+1]$
-3.  **State Transition (Battery Draw)**: 
-    $$ soc_{k+1} = soc_k - \frac{u_k \cdot \Delta t_k}{1000} $$
-4.  **Regulatory Cap**: 
-    $$ \sum_{k=1}^{N} \frac{u_k \cdot \Delta t_k}{1000} \le E_{lap\_max} $$
+3.  **State Transition (Battery Draw)**: $$ soc_{k+1} = soc_k - \frac{u_k \cdot \Delta t_k}{1000} $$
+4.  **Regulatory Cap**: $$ \sum_{k=1}^{N} \frac{u_k \cdot \Delta t_k}{1000} \le E_{lap\_max} $$
 5.  **Dynamic Defense Floor**: $soc_{N+1} \ge R_{defend}$
 
 ---

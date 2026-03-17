@@ -2,7 +2,7 @@
 # Core solver that calculates optimal deployment trajectory (QP or LP)
 
 using JuMP
-using Gurobi
+using HiGHS
 
 struct MPCSolver
     model::Model
@@ -12,7 +12,7 @@ end
 function setup_solver(horizon::Int, track::TrackMap, initial_soc::Float64, defend_reserve::Float64)
     # Using Gurobi as the selected high-performance solver
     # This acts as an LP/QP solver
-    model = Model(Gurobi.Optimizer)
+    model = Model(HiGHS.Optimizer)
     set_silent(model)
     
     # 2026 Regulation Parameters

@@ -1,2 +1,2 @@
 using Pkg
-Pkg.add(["JuMP", "Gurobi"])
+Pkg.add(["JuMP", "HiGHS", "Gurobi"])
