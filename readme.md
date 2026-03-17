@@ -1,4 +1,4 @@
-# Project Overbid: Mathematical Optimization & Heuristic Model Documentation
+# Project Overbid: Mathematical Optimization & Heuristic Model Proof-of-Concept
 
 ## 1. Overview
 Project Overbid is an edge-computed energy management system designed for the 2026 FIA Formula 1 Regulations. It utilizes **Model Predictive Control (MPC)** to dynamically dispatch a 350kW "Overtake Mode" motor by treating the car's State of Charge (SOC) as a quantifiable grid-scale continuous variable, and track location as a market-clearing price.
@@ -8,7 +8,7 @@ This document formalizes the mathematical optimization bounds, system architectu
 ---
 
 ## 2. The MPC Mathematical Optimization Model
-The core of Project Overbid relies on a Linear Programming (LP) optimization problem solved by the Gurobi engine in `MPCEngine.jl`. 
+The core of Project Overbid relies on a Linear Programming (LP) optimization problem solved by the HiGHS solver in `MPCEngine.jl`. 
 
 ### Variables
 Let the prediction horizon be $N$ nodes (where $N=10$ covers the entirety of the Sepang circuit):
@@ -70,7 +70,7 @@ Because Car B fails to calculate the geometric marginal value $\pi_k$ or utilize
 ---
 
 ## 5. Shadow Price HMI Integration
-The edge computing pipeline features a direct visualization system. When the Gurobi engine solves the MPC, it generates **Dual Variables ($\lambda_{soc}$)** for the dynamic state transition constraints.
+The edge computing pipeline features a direct visualization system. When the HiGHS Solver solves the MPC, it generates **Dual Variables ($\lambda_{soc}$)** for the dynamic state transition constraints.
 
 These duals represent the exact quantifiable "shadow price", or opportunity cost, of using $1 MJ$ of battery right now relative to saving it for the end of the horizon.
 
@@ -80,3 +80,8 @@ These duals represent the exact quantifiable "shadow price", or opportunity cost
 *   **Red (Defend)**: Current node value < Future storage value.
 
 These strings are piped back directly into the `visualizer/data.js` telemetry UI, yielding a deterministic steering wheel dashboard for driver intuition.
+
+### 6. Possible Improvements
+1. Adding stochastic scenarios
+2. Better race kinematic modelling
+3. The heuristic used to model the opponent car is fairly simple. A more sophisticated strategy could be used.
