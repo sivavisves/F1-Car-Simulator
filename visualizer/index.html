@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Overbid: Simulation Visualizer</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-color: #1e293b;
+            --text-color: #f8fafc;
+            --car-a-color: #3b82f6; /* Blue for MPC */
+            --car-b-color: #ef4444; /* Red for Heuristic */
+            --accent-color: #10b981;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            margin-top: 0;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 2rem;
+        }
+
+        .panel {
+            background-color: var(--panel-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        .car-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .car-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+        }
+
+        .car-a-dot { background-color: var(--car-a-color); box-shadow: 0 0 10px var(--car-a-color); }
+        .car-b-dot { background-color: var(--car-b-color); box-shadow: 0 0 10px var(--car-b-color); }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .stat-box {
+            background-color: rgba(0,0,0,0.2);
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .hmi-indicator {
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 700;
+            display: inline-block;
+            margin-top: 0.5rem;
+        }
+
+        .hmi-GREEN { background-color: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981;}
+        .hmi-YELLOW { background-color: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b;}
+        .hmi-RED { background-color: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444;}
+        
+        .gap-box {
+            grid-column: span 2;
+            background-color: rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        .gap-ahead { color: #10b981; }
+        .gap-behind { color: #ef4444; }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background-color: #059669;
+            transform: translateY(-1px);
+        }
+
+        .track-container {
+            width: 100%;
+            max-width: 1000px;
+            background-color: var(--panel-color);
+            border-radius: 12px;
+            padding: 2rem;
+            box-sizing: border-box;
+            position: relative;
+            display: flex;
+            justify-content: center;
+        }
+
+        svg {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            overflow: visible;
+        }
+
+        .track-path {
+            fill: none;
+            stroke: #334155;
+            stroke-width: 40;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .track-centerline {
+            fill: none;
+            stroke: #ffffff;
+            stroke-width: 2;
+            stroke-dasharray: 10 10;
+        }
+
+        .start-finish {
+            fill: none;
+            stroke: #f8fafc;
+            stroke-width: 6;
+        }
+        
+        .node-marker {
+            fill: #64748b;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Project Overbid: 56-Lap Simulation</h1>
+    
+    <div class="controls">
+        <button id="playBtn">Play Race</button>
+        <div style="font-size: 1.25rem; font-weight: 600;">Lap: <span id="lapCount">1</span> / 56</div>
+        <div style="font-size: 1.25rem; margin-left:20px;">Node: <span id="nodeCount">1</span></div>
+    </div>
+
+    <div class="dashboard">
+        <!-- Car A Panel -->
+        <div class="panel" style="border-top: 4px solid var(--car-a-color);">
+            <div class="car-header">
+                <div class="car-dot car-a-dot"></div>
+                Car A (MPC Agent)
+            </div>
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">Deploy (kW)</div>
+                    <div class="stat-value" id="carA_kW">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">SOC (MJ)</div>
+                    <div class="stat-value" id="carA_soc">4.00</div>
+                </div>
+                <div class="stat-box" style="grid-column: span 2;">
+                    <div class="stat-label">Steering Wheel HMI</div>
+                    <div id="carA_hmi" class="hmi-indicator hmi-GREEN">READY</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Car B Panel -->
+        <div class="panel" style="border-top: 4px solid var(--car-b-color);">
+            <div class="car-header">
+                <div class="car-dot car-b-dot"></div>
+                Car B (Heuristic)
+            </div>
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">Deploy (kW)</div>
+                    <div class="stat-value" id="carB_kW">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">SOC (MJ)</div>
+                    <div class="stat-value" id="carB_soc">4.00</div>
+                </div>
+                <div class="stat-box gap-box">
+                    <div class="stat-label">Gap to Car B</div>
+                    <div class="stat-value" id="race_gap">0.000s</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Track Graphic -->
+    <div class="track-container">
+        <svg viewBox="0 0 1000 400" id="trackSvg">
+            <!-- Simulated Sepang F1 Circuit Path -->
+            <path id="mainTrack" class="track-path" d="M 200 100 L 800 100 Q 900 100 900 200 L 900 300 Q 900 350 850 350 L 500 350 Q 450 350 450 300 Q 450 250 400 250 L 250 250 Q 150 250 150 150 Z" />
+            <path id="centerTrack" class="track-centerline" d="M 200 100 L 800 100 Q 900 100 900 200 L 900 300 Q 900 350 850 350 L 500 350 Q 450 350 450 300 Q 450 250 400 250 L 250 250 Q 150 250 150 150 Z" />
+            
+            <line class="start-finish" x1="200" y1="80" x2="200" y2="120" />
+            <text x="200" y="70" fill="white" font-size="14" text-anchor="middle">S/F Line</text>
+            
+            <!-- Nodes will be added dynamically -->
+            <!-- Cars -->
+            <circle id="carA_svg" r="8" fill="var(--car-a-color)" filter="drop-shadow(0px 0px 4px var(--car-a-color))"/>
+            <circle id="carB_svg" r="8" fill="var(--car-b-color)" filter="drop-shadow(0px 0px 4px var(--car-b-color))"/>
+        </svg>
+    </div>
+
+    <!-- Load the generated data -->
+    <script src="data.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof RACE_DATA === 'undefined') {
+                alert("RACE_DATA not found. Make sure data.js is generated first!");
+                return;
+            }
+
+            const path = document.getElementById('centerTrack');
+            const totalLength = path.getTotalLength();
+            const trackLengthMeters = RACE_DATA.track.reduce((sum, n) => sum + n.length, 0);
+
+            // Draw nodes
+            let currentMeters = 0;
+            const svg = document.getElementById('trackSvg');
+            RACE_DATA.track.forEach((node, idx) => {
+                const fraction = currentMeters / trackLengthMeters;
+                const point = path.getPointAtLength(fraction * totalLength);
+                
+                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circle.setAttribute("cx", point.x);
+                circle.setAttribute("cy", point.y);
+                circle.setAttribute("r", 5);
+                circle.setAttribute("class", "node-marker");
+                
+                // Add node text
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", point.x + 10);
+                text.setAttribute("y", point.y - 10);
+                text.setAttribute("fill", "#94a3b8");
+                text.setAttribute("font-size", "12");
+                text.textContent = "N" + (idx + 1);
+                
+                svg.appendChild(circle);
+                svg.appendChild(text);
+
+                currentMeters += node.length;
+            });
+
+            // Re-append cars so they sit on top
+            const carA_svg = document.getElementById('carA_svg');
+            const carB_svg = document.getElementById('carB_svg');
+            svg.appendChild(carA_svg);
+            svg.appendChild(carB_svg);
+
+            // UI Elements
+            const lapEl = document.getElementById('lapCount');
+            const nodeEl = document.getElementById('nodeCount');
+            const aKwEl = document.getElementById('carA_kW');
+            const aSocEl = document.getElementById('carA_soc');
+            const aHmiEl = document.getElementById('carA_hmi');
+            const bKwEl = document.getElementById('carB_kW');
+            const bSocEl = document.getElementById('carB_soc');
+            const gapEl = document.getElementById('race_gap');
+
+            let isPlaying = false;
+            let currentLapIdx = 0;
+            let currentNodeIdx = 0;
+            let timeAccumulator = 0;
+            
+            // Nodes don't correspond exactly to uniform time, so we just step through nodes at fixed JS interval for visualization
+            const stepMs = 200; // time per node simulation tick
+
+            function updateUI(lapIdx, nodeIdx) {
+                const lapData = RACE_DATA.laps[lapIdx];
+                if (!lapData) return;
+                const nodeData = lapData[nodeIdx];
+                if (!nodeData) return;
+
+                lapEl.textContent = lapIdx + 1;
+                nodeEl.textContent = nodeData.node;
+
+                aKwEl.textContent = Math.round(nodeData.carA_deploy_kW);
+                aSocEl.textContent = nodeData.carA_soc.toFixed(2);
+                
+                // Update HMI Indicator
+                if (nodeData.carA_hmi) {
+                    aHmiEl.textContent = nodeData.carA_hmi;
+                    aHmiEl.className = "hmi-indicator hmi-" + nodeData.carA_hmi;
+                }
+                
+                bKwEl.textContent = Math.round(nodeData.carB_deploy_kW);
+                bSocEl.textContent = nodeData.carB_soc.toFixed(2);
+                
+                // Update Gap
+                if (nodeData.gap !== undefined) {
+                    const gapSec = nodeData.gap;
+                    if (gapSec < 0) {
+                        gapEl.textContent = Math.abs(gapSec).toFixed(3) + "s Ahead";
+                        gapEl.className = "stat-value gap-ahead";
+                    } else if (gapSec > 0) {
+                        gapEl.textContent = gapSec.toFixed(3) + "s Behind";
+                        gapEl.className = "stat-value gap-behind";
+                    } else {
+                        gapEl.textContent = "0.000s (Tied)";
+                        gapEl.className = "stat-value";
+                    }
+                }
+
+                // Position calculation based on node ID (very rough visualization logic)
+                // Offset Car B slightly so they don't exactly overlap
+                let metersBeforeNode = 0;
+                for(let i=0; i<nodeIdx; i++) {
+                    metersBeforeNode += RACE_DATA.track[i].length;
+                }
+                const trackFraction = metersBeforeNode / trackLengthMeters;
+                const point = path.getPointAtLength(trackFraction * totalLength);
+                
+                carA_svg.setAttribute("cx", point.x);
+                carA_svg.setAttribute("cy", point.y - 5); // offset A
+
+                carB_svg.setAttribute("cx", point.x);
+                carB_svg.setAttribute("cy", point.y + 5); // offset B
+            }
+
+            let animationTid;
+            const playBtn = document.getElementById('playBtn');
+
+            function tick() {
+                if (!isPlaying) return;
+                
+                updateUI(currentLapIdx, currentNodeIdx);
+                
+                currentNodeIdx++;
+                if (currentNodeIdx >= RACE_DATA.laps[currentLapIdx].length) {
+                    currentNodeIdx = 0;
+                    currentLapIdx++;
+                    if (currentLapIdx >= RACE_DATA.laps.length) {
+                        currentLapIdx = 0; // loop back or stop
+                        isPlaying = false;
+                        playBtn.textContent = "Play Race";
+                        return;
+                    }
+                }
+                setTimeout(tick, stepMs);
+            }
+
+            // Init frame 0
+            if(RACE_DATA.laps.length > 0 && RACE_DATA.laps[0].length > 0) {
+                updateUI(0, 0);
+            }
+
+            playBtn.addEventListener('click', () => {
+                isPlaying = !isPlaying;
+                if (isPlaying) {
+                    playBtn.textContent = "Pause Race";
+                    tick();
+                } else {
+                    playBtn.textContent = "Resume Race";
+                }
+            });
+        });
+    </script>
+</body>
+</html>
